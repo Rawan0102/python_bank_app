@@ -109,7 +109,7 @@ class SavingsAccount(Account):
 # Testing customer and acount
 
 # Create a new customer with accounts
-customer1 = Customer("10001", "Rawan", "Alqahtani", "ievey0", 1000, 10000)
+customer1 = Customer("10001", "suresh", "sigera", "juagw362", 1000, 10000)
 
 print(customer1)
 print(customer1.checking_account)
@@ -121,3 +121,40 @@ customer1.savings_account.withdraw(200)
 
 customer1.checking_account.transfer(customer1.savings_account, 300)
 
+class Bank:
+    def __init__(self):
+        self.customers = BankFileHandler.load_customers()
+        self.logged_in_customer = None
+
+    def login_customer(self, account_id, password):
+        """Logs in a customer by verifying credentials."""
+        for customer in self.customers:
+            if customer['account_id'] == account_id and customer['password'] == password:
+                self.logged_in_customer = customer
+                print(f"✅ Welcome, {customer['first_name']}! You are now logged in.")
+                return customer
+        print("❌ Invalid login credentials.")
+        return None
+
+    def logout_customer(self):
+        """Logs out the current customer."""
+        if self.logged_in_customer:
+            print(f"👋 Goodbye, {self.logged_in_customer.get_full_name()}!")
+            self.logged_in_customer = None
+        else:
+            print("❌ No user is currently logged in.")
+
+#Testing Login 
+# bank = Bank()
+# customer = bank.login_customer("10001", "juagw362")  
+# if customer:
+#     print(customer)  
+#     print(customer.checking_account)  
+#     print(customer.savings_account)  
+#     customer.checking_account.deposit(200)
+#     customer.savings_account.withdraw(500)
+#     customer.checking_account.transfer(customer.savings_account, 300)
+
+# bank.logout_customer()
+
+# bank.login_customer("10001", "wrongpassword")
