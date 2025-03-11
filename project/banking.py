@@ -1,200 +1,242 @@
 import csv
 
-class BankFileHandler:
-    FILE_NAME = "bank.csv"
+class Bank:
+    def __init__(self, filename='bank.csv'):
+        self.filename = filename
+        self.customers = self.load_customers()
 
-    @staticmethod
-    def load_customers():
-        """Loads customer data from bank.csv"""
-        customers = []
+    def load_customers(self):
+        customers = {}
         try:
-            with open(BankFileHandler.FILE_NAME, "r") as file:
-                reader = csv.reader(file, delimiter=";") 
+            with open(self.filename, mode='r') as file:
+                reader = csv.reader(file, delimiter=';') 
                 for row in reader:
-                    account_id, first_name, last_name, password, checking_balance, savings_balance = row
-                    customers.append({
-                        "account_id": account_id,
-                        "first_name": first_name,
-                        "last_name": last_name,
-                        "password": password,
-                        "checking_balance": float(checking_balance),
-                        "savings_balance": float(savings_balance)
-                    })
+                    if len(row) < 6 or row[0] == "account_id":
+                        continue  
+                    account_id, first_name, last_name, password, checking, savings = row
+                    customers[account_id] = Customer(account_id, first_name, last_name, password, float(checking), float(savings))
         except FileNotFoundError:
-            print(" ❌ Error: bank.csv file not found!")
+            with open(self.filename, mode='w', newline='') as file:
+                writer = csv.writer(file, delimiter=';')
+                writer.writerow(["account_id", "first_name", "last_name", "password", "balance_checking", "balance_savings"])
         return customers
 
-    @staticmethod
-    def save_customers(customers):
-        """Writes updated customer data back to bank.csv"""
-        with open(BankFileHandler.FILE_NAME, "w", newline="") as file:
-            writer = csv.writer(file, delimiter=";")
-            for customer in customers:
-                writer.writerow([
-                    customer["account_id"],
-                    customer["first_name"],
-                    customer["last_name"],
-                    customer["password"],
-                    customer["checking_balance"],
-                    customer["savings_balance"]
-                ])
+    def save_customers(self):
+        with open(self.filename, mode='w', newline='') as file:
+            writer = csv.writer(file, delimiter=';')  
+            writer.writerow(["account_id", "first_name", "last_name", "password", "balance_checking", "balance_savings"])
+            for customer in self.customers.values():
+                writer.writerow([customer.account_id, customer.first_name, customer.last_name, customer.password, customer.balance_checking, customer.balance_savings])
 
-# Test Unit
-customers = BankFileHandler.load_customers()
-if customers:
-    print("✅ Customers loaded successfully!\n")
-    for customer in customers:
-        print(f"ID: {customer['account_id']}, Name: {customer['first_name']} {customer['last_name']}, Checking: ${customer['checking_balance']}, Savings: ${customer['savings_balance']}")
-else:
-    print("❌ Error: No customer data found!")
+    def add_customer(self):
+        first_name = input("Enter First Name: ")
+        last_name = input("Enter Last Name: ")
+        password = input("Enter Password: ")
+        
+        # Ask for the type of accounts and their balances
+        account_id = str(10000 + len(self.customers) + 1)  
+        
+        
+        account_type = input("Do you want a 'checking' account, 'savings' account, or 'both'? ").lower()
+
+        if 'checking' in account_type:
+            balance_checking = float(input("Enter initial balance for checking account: $"))
+        
+        if 'savings' in account_type:
+            balance_savings = float(input("Enter initial balance for savings account: $"))
+
+        if 'both' in account_type:
+            balance_checking = float(input("Enter initial balance for checking account: $"))
+            balance_savings = float(input("Enter initial balance for savings account: $"))
+
+
+        new_customer = Customer(account_id, first_name, last_name, password, balance_checking, balance_savings)
+        self.customers[account_id] = new_customer
+        self.save_customers()
+        print(f"Account created! Your ID: {account_id}")
+
+    def authenticate(self):
+        account_id = input("Enter Account ID: ")
+        password = input("Enter Password: ")
+        if account_id in self.customers and self.customers[account_id].password == password:
+            print("Login successful!")
+            return self.customers[account_id]
+        print("Login failed!")
+        return None
 
 class Customer:
-    def __init__(self, account_id, first_name, last_name, password, checking_balance=0, savings_balance=0):
+    def __init__(self, account_id, first_name, last_name, password, balance_checking=0.0, balance_savings=0.0):
         self.account_id = account_id
         self.first_name = first_name
         self.last_name = last_name
         self.password = password
-        self.checking_account = CheckingAccount(self, checking_balance)
-        self.savings_account = SavingsAccount(self, savings_balance)
+        self.balance_checking = balance_checking
+        self.balance_savings = balance_savings
 
-    def get_full_name(self):
-        return f"{self.first_name} {self.last_name}"
+    def display_balance(self):
+        print(f"Checking Balance: ${self.balance_checking:.2f}")
+        print(f"Savings Balance: ${self.balance_savings:.2f}")
 
-    def verify_password(self, password):
-        return self.password == password
+    def deposit(self, account_type, amount):
+        if amount <= 0:
+            print("Invalid deposit amount.")
+            return
+        if account_type == "checking":
+            self.balance_checking += amount
+        elif account_type == "savings":
+            self.balance_savings += amount
+        print(f"Successfully deposited ${amount:.2f} into {account_type}.")
 
-    def __str__(self):
-        return f"Customer: {self.get_full_name()} (ID: {self.account_id})"
+    def withdraw(self, account_type, amount):
+        if amount <= 0:
+            print("Invalid withdrawal amount.")
+            return
+        if account_type == "checking":
+            if amount > self.balance_checking:
+                print("Insufficient funds.")
+                return
+            self.balance_checking -= amount
+        elif account_type == "savings":
+            if amount > self.balance_savings:
+                print("Insufficient funds.")
+                return
+            self.balance_savings -= amount
+        print(f"Successfully withdrew ${amount:.2f} from {account_type}.")
 
-class Account:
-    def __init__(self, owner, balance=0):
-        self.owner = owner  
-        self.balance = float(balance)
+class Transfer:
+    def __init__(self, bank, user):
+        self.bank = bank
+        self.user = user
 
-    def deposit(self, amount):
-        if amount > 0:
-            self.balance += amount
-            print(f"✅ Deposited ${amount:.2f} into {self.__class__.__name__}. New balance: ${self.balance:.2f}")
-        else:
-            print("❌ Deposit amount must be positive!")
+    def transfer_between_own_accounts(self):
+        print("\nTransfer Between Your Own Accounts")
+        from_account = input("Which account would you like to transfer from? (checking/savings): ").lower()
+        to_account = input("Which account would you like to transfer to? (checking/savings): ").lower()
 
-    def withdraw(self, amount):
-        if amount > self.balance:
-            print("❌ Insufficient funds!")
-        elif amount <= 0:
-            print("❌ Withdrawal amount must be positive!")
-        else:
-            self.balance -= amount
-            print(f"✅ Withdrawn ${amount:.2f}. New balance: ${self.balance:.2f}")
+        if from_account not in ['checking', 'savings'] or to_account not in ['checking', 'savings']:
+            print("Invalid account type. Please choose 'checking' or 'savings'.")
+            return
+        
+        if from_account == to_account:
+            print("You cannot transfer between the same account type.")
+            return
 
-    def transfer(self, target_account, amount):
-        if self.balance >= amount and amount > 0:
-            self.balance -= amount
-            target_account.balance += amount
-            print(f"✅ Transferred ${amount:.2f} to {target_account.__class__.__name__}.")
-        else:
-            print("❌ Transfer failed. Check balance or amount!")
+        amount = float(input(f"Enter amount to transfer from {from_account} to {to_account}: $"))
+        
+        if amount <= 0:
+            print("Transfer amount must be greater than 0.")
+            return
 
-    def __str__(self):
-        return f"{self.__class__.__name__}: ${self.balance:.2f}"
+        # Check if the user has sufficient funds in the source account
+        if from_account == 'checking' and amount > self.user.balance_checking:
+            print("Insufficient funds in checking account.")
+            return
+        if from_account == 'savings' and amount > self.user.balance_savings:
+            print("Insufficient funds in savings account.")
+            return
 
-class CheckingAccount(Account):
-    def __init__(self, owner, balance=0):
-        super().__init__(owner, balance)
+        # Perform the transfer
+        if from_account == 'checking':
+            self.user.balance_checking -= amount
+        elif from_account == 'savings':
+            self.user.balance_savings -= amount
 
-class SavingsAccount(Account):
-    def __init__(self, owner, balance=0):
-        super().__init__(owner, balance)
+        if to_account == 'checking':
+            self.user.balance_checking += amount
+        elif to_account == 'savings':
+            self.user.balance_savings += amount
 
-# Testing customer and acount
+        print(f"Successfully transferred ${amount:.2f} from {from_account} to {to_account}.")
+        self.bank.save_customers()
 
-# Create a new customer with accounts
-customer1 = Customer("10001", "suresh", "sigera", "juagw362", 1000, 10000)
+    def transfer_to_another_customer(self):
+        print("\nTransfer to Another Customer")
+        recipient_id = input("Enter the recipient's account ID: ")
 
-print(customer1)
-print(customer1.checking_account)
-print(customer1.savings_account)
+        if recipient_id not in self.bank.customers:
+            print("Recipient account not found.")
+            return
+        
+        recipient = self.bank.customers[recipient_id]
+        from_account = input("Which account would you like to transfer from? (checking/savings): ").lower()
+        amount = float(input(f"Enter amount to transfer from your {from_account}: $"))
 
-customer1.checking_account.deposit(500)
+        if amount <= 0:
+            print("Transfer amount must be greater than 0.")
+            return
 
-customer1.savings_account.withdraw(200)
+        # Check if the user has sufficient funds in the source account
+        if from_account == 'checking' and amount > self.user.balance_checking:
+            print("Insufficient funds in checking account.")
+            return
+        if from_account == 'savings' and amount > self.user.balance_savings:
+            print("Insufficient funds in savings account.")
+            return
 
-customer1.checking_account.transfer(customer1.savings_account, 300)
+        # Perform the transfer from the user's account to the recipient's account
+        if from_account == 'checking':
+            self.user.balance_checking -= amount
+            recipient.balance_checking += amount
+        elif from_account == 'savings':
+            self.user.balance_savings -= amount
+            recipient.balance_savings += amount
 
-class Bank:
-    def __init__(self):
-        self.customers = BankFileHandler.load_customers()
-        self.logged_in_customer = None
+        print(f"Successfully transferred ${amount:.2f} to {recipient.first_name} {recipient.last_name}'s account.")
+        self.bank.save_customers()
 
-    def login_customer(self, account_id, password):
-        """Logs in a customer by verifying credentials."""
-        for customer in self.customers:
-            if customer['account_id'] == account_id and customer['password'] == password:
-                self.logged_in_customer = customer
-                print(f"✅ Welcome, {customer['first_name']}! You are now logged in.")
-                return customer
-        print("❌ Invalid login credentials.")
-        return None
-
-    def logout_customer(self):
-        """Logs out the current customer."""
-        if self.logged_in_customer:
-            print(f"👋 Goodbye, {self.logged_in_customer.get_full_name()}!")
-            self.logged_in_customer = None
-        else:
-            print("❌ No user is currently logged in.")
-
-#Testing Login 
-# bank = Bank()
-# customer = bank.login_customer("10001", "juagw362")  
-# if customer:
-#     print(customer)  
-#     print(customer.checking_account)  
-#     print(customer.savings_account)  
-#     customer.checking_account.deposit(200)
-#     customer.savings_account.withdraw(500)
-#     customer.checking_account.transfer(customer.savings_account, 300)
-
-# bank.logout_customer()
-
-# bank.login_customer("10001", "wrongpassword")
-
+# Test
 bank = Bank()
-# Test Valid Login
-print("\n🔹 TEST: Valid Login")
-customer = bank.login_customer("10001", "juagw362")
-if customer:
-    print(f"✅ Logged in as: {customer.get_full_name()}")
-    print(f"🔹 Checking Balance: {customer.checking_account}")
-    print(f"🔹 Savings Balance: {customer.savings_account}")
 
-    # Test Deposit
-    print("\n🔹 TEST: Deposit into Checking")
-    customer.checking_account.deposit(200)
+while True:
+    print("\nWelcome to Rawan's Bank 😊 🏦")
+    print("1. Create Account")
+    print("2. Login")
+    print("3. Exit")
+    choice = input("Choose an option: ")
 
-    # Test Withdrawal
-    print("\n🔹 TEST: Withdraw from Savings")
-    customer.savings_account.withdraw(500)
+    if choice == "1":
+        bank.add_customer()
+    elif choice == "2":
+        user = bank.authenticate()
+        if user:
+            transfer = Transfer(bank, user)  # Initialize the Transfer class with the logged-in user
+            while True:
+                print("\n1. View Balance")
+                print("2. Deposit")
+                print("3. Withdraw")
+                print("4. Transfer Money")
+                print("5. Logout")
+                action = input("Choose an option: ")
+                if action == "1":
+                    user.display_balance()
+                elif action == "2":
+                    account_type = input("Deposit to checking or savings? ").lower()
+                    amount = float(input("Enter amount to deposit: "))
+                    user.deposit(account_type, amount)
+                    bank.save_customers()
+                elif action == "3":
+                    account_type = input("Withdraw from checking or savings? ").lower()
+                    amount = float(input("Enter amount to withdraw: "))
+                    user.withdraw(account_type, amount)
+                    bank.save_customers()
+                elif action == "4":
+                    print("\n1. Transfer Between Your Own Accounts")
+                    print("2. Transfer to Another Customer")
+                    transfer_choice = input("Choose a transfer option: ")
 
-    # Test Transfer
-    print("\n🔹 TEST: Transfer from Checking to Savings")
-    customer.checking_account.transfer(customer.savings_account, 300)
-
-    # Logout
-    print("\n🔹 TEST: Logout")
-    bank.logout_customer()
-
-# Test Invalid Login
-print("\n🔹 TEST: Invalid Login Attempt")
-customer = bank.login_customer("10001", "wrongpassword")
-if not customer:
-    print("✅ Invalid login correctly handled.")
-
-# Test Login Another Customer
-print("\n🔹 TEST: Login Different Customer")
-customer2 = bank.login_customer("10002", "correctpassword")  
-if customer2:
-    print(f"✅ Logged in as: {customer2.get_full_name()}")
-    print(f"🔹 Checking Balance: {customer2.checking_account}")
-    print(f"🔹 Savings Balance: {customer2.savings_account}")
-    bank.logout_customer()
+                    if transfer_choice == "1":
+                        transfer.transfer_between_own_accounts()
+                    elif transfer_choice == "2":
+                        transfer.transfer_to_another_customer()
+                    else:
+                        print("Invalid option. Try again.")
+                elif action == "5":
+                    print("Logged out.")
+                    break
+                else:
+                    print("Invalid choice. Try again.")
+    elif choice == "3":
+        print("Thank you for using Rawan's Bank 😊!")
+        break
+    else:
+        print("Invalid option. Try again.")
