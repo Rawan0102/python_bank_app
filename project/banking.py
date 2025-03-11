@@ -158,3 +158,43 @@ class Bank:
 # bank.logout_customer()
 
 # bank.login_customer("10001", "wrongpassword")
+
+bank = Bank()
+# Test Valid Login
+print("\n🔹 TEST: Valid Login")
+customer = bank.login_customer("10001", "juagw362")
+if customer:
+    print(f"✅ Logged in as: {customer.get_full_name()}")
+    print(f"🔹 Checking Balance: {customer.checking_account}")
+    print(f"🔹 Savings Balance: {customer.savings_account}")
+
+    # Test Deposit
+    print("\n🔹 TEST: Deposit into Checking")
+    customer.checking_account.deposit(200)
+
+    # Test Withdrawal
+    print("\n🔹 TEST: Withdraw from Savings")
+    customer.savings_account.withdraw(500)
+
+    # Test Transfer
+    print("\n🔹 TEST: Transfer from Checking to Savings")
+    customer.checking_account.transfer(customer.savings_account, 300)
+
+    # Logout
+    print("\n🔹 TEST: Logout")
+    bank.logout_customer()
+
+# Test Invalid Login
+print("\n🔹 TEST: Invalid Login Attempt")
+customer = bank.login_customer("10001", "wrongpassword")
+if not customer:
+    print("✅ Invalid login correctly handled.")
+
+# Test Login Another Customer
+print("\n🔹 TEST: Login Different Customer")
+customer2 = bank.login_customer("10002", "correctpassword")  
+if customer2:
+    print(f"✅ Logged in as: {customer2.get_full_name()}")
+    print(f"🔹 Checking Balance: {customer2.checking_account}")
+    print(f"🔹 Savings Balance: {customer2.savings_account}")
+    bank.logout_customer()
