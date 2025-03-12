@@ -32,8 +32,7 @@ class Bank:
         first_name = input("Enter First Name: ")
         last_name = input("Enter Last Name: ")
         password = input("Enter Password: ")
-        
-        # Ask for the type of accounts and their balances
+
         account_id = str(10000 + len(self.customers) + 1)  
         
         
@@ -53,15 +52,15 @@ class Bank:
         new_customer = Customer(account_id, first_name, last_name, password, balance_checking, balance_savings)
         self.customers[account_id] = new_customer
         self.save_customers()
-        print(f"Account created! Your ID: {account_id}")
+        print(f"Account created! ✨ Your ID: {account_id}")
 
     def authenticate(self):
         account_id = input("Enter Account ID: ")
         password = input("Enter Password: ")
         if account_id in self.customers and self.customers[account_id].password == password:
-            print("Login successful!")
+            print("Login successful! ✅")
             return self.customers[account_id]
-        print("Login failed!")
+        print("Login failed! ❌")
         return None
 
 class Customer:
@@ -72,6 +71,7 @@ class Customer:
         self.password = password
         self.balance_checking = balance_checking
         self.balance_savings = balance_savings
+        self.overdraft_protection = OverdraftProtection(self)
 
     def display_balance(self):
         print(f"Checking Balance: ${self.balance_checking:.2f}")
@@ -79,30 +79,26 @@ class Customer:
 
     def deposit(self, account_type, amount):
         if amount <= 0:
-            print("Invalid deposit amount.")
+            print("Invalid deposit amount. ❌")
             return
         if account_type == "checking":
             self.balance_checking += amount
         elif account_type == "savings":
             self.balance_savings += amount
-        print(f"Successfully deposited ${amount:.2f} into {account_type}.")
+        print(f"Successfully deposited ${amount:.2f} into {account_type}. ✅")
 
     def withdraw(self, account_type, amount):
         if amount <= 0:
-            print("Invalid withdrawal amount.")
+            print("Invalid withdrawal amount. ❌")
             return
         if account_type == "checking":
-            if amount > self.balance_checking:
-                print("Insufficient funds.")
+            if not self.overdraft_protection.process_withdrawal(amount):
                 return
-            self.balance_checking -= amount
-        elif account_type == "savings":
-            if amount > self.balance_savings:
-                print("Insufficient funds.")
-                return
-            self.balance_savings -= amount
-        print(f"Successfully withdrew ${amount:.2f} from {account_type}.")
 
+        elif account_type == "savings":
+            if not self.overdraft_protection.process_withdrawal(amount):
+                return
+        
 class Transfer:
     def __init__(self, bank, user):
         self.bank = bank
@@ -114,28 +110,26 @@ class Transfer:
         to_account = input("Which account would you like to transfer to? (checking/savings): ").lower()
 
         if from_account not in ['checking', 'savings'] or to_account not in ['checking', 'savings']:
-            print("Invalid account type. Please choose 'checking' or 'savings'.")
+            print("Invalid account type ❌. Please choose 'checking' or 'savings'.")
             return
         
         if from_account == to_account:
-            print("You cannot transfer between the same account type.")
+            print("You cannot transfer between the same account type ❗.")
             return
 
         amount = float(input(f"Enter amount to transfer from {from_account} to {to_account}: $"))
         
         if amount <= 0:
-            print("Transfer amount must be greater than 0.")
+            print("Transfer amount must be greater than 0 ❗.")
             return
-
-        # Check if the user has sufficient funds in the source account
+  
         if from_account == 'checking' and amount > self.user.balance_checking:
             print("Insufficient funds in checking account.")
             return
         if from_account == 'savings' and amount > self.user.balance_savings:
             print("Insufficient funds in savings account.")
             return
-
-        # Perform the transfer
+ 
         if from_account == 'checking':
             self.user.balance_checking -= amount
         elif from_account == 'savings':
@@ -146,7 +140,7 @@ class Transfer:
         elif to_account == 'savings':
             self.user.balance_savings += amount
 
-        print(f"Successfully transferred ${amount:.2f} from {from_account} to {to_account}.")
+        print(f"Successfully transferred ${amount:.2f} from {from_account} to {to_account}. ✅")
         self.bank.save_customers()
 
     def transfer_to_another_customer(self):
@@ -162,18 +156,16 @@ class Transfer:
         amount = float(input(f"Enter amount to transfer from your {from_account}: $"))
 
         if amount <= 0:
-            print("Transfer amount must be greater than 0.")
+            print("Transfer amount must be greater than 0 ❗.")
             return
-
-        # Check if the user has sufficient funds in the source account
+ 
         if from_account == 'checking' and amount > self.user.balance_checking:
             print("Insufficient funds in checking account.")
             return
         if from_account == 'savings' and amount > self.user.balance_savings:
             print("Insufficient funds in savings account.")
             return
-
-        # Perform the transfer from the user's account to the recipient's account
+ 
         if from_account == 'checking':
             self.user.balance_checking -= amount
             recipient.balance_checking += amount
@@ -181,8 +173,31 @@ class Transfer:
             self.user.balance_savings -= amount
             recipient.balance_savings += amount
 
-        print(f"Successfully transferred ${amount:.2f} to {recipient.first_name} {recipient.last_name}'s account.")
+        print(f"Successfully transferred ${amount:.2f} to {recipient.first_name} {recipient.last_name}'s account. ✅")
         self.bank.save_customers()
+
+class OverdraftProtection:
+    def __init__(self, customer):
+        self.customer = customer
+        self.overdraft_fee = 35.0  
+
+    def process_withdrawal(self, amount):
+        if self.customer.balance_checking < 0:
+            self.customer.balance_checking -= self.overdraft_fee
+            print(f"Overdraft! A fee of ${self.overdraft_fee:.2f} has been charged 💸.")
+    
+        if self.customer.balance_checking - amount < -100:
+            print("Transaction denied: Account balance cannot go below -$100.")
+            return False 
+
+        self.customer.balance_checking -= amount
+
+        if self.customer.balance_checking < 0:
+            print(f"Overdraft occurred! Charging a fee of ${self.overdraft_fee:.2f} 💸.")
+            self.customer.balance_checking -= self.overdraft_fee
+
+        print(f"Successfully withdrew ${amount:.2f} from checking account. ✅")
+        return True  
 
 # Test
 bank = Bank()
@@ -199,9 +214,9 @@ while True:
     elif choice == "2":
         user = bank.authenticate()
         if user:
-            transfer = Transfer(bank, user)  # Initialize the Transfer class with the logged-in user
+            transfer = Transfer(bank, user)  
             while True:
-                print("\n1. View Balance")
+                print("\n1. Check Balance")
                 print("2. Deposit")
                 print("3. Withdraw")
                 print("4. Transfer Money")
@@ -229,14 +244,14 @@ while True:
                     elif transfer_choice == "2":
                         transfer.transfer_to_another_customer()
                     else:
-                        print("Invalid option. Try again.")
+                        print("Invalid option. Try again. ❗")
                 elif action == "5":
                     print("Logged out.")
                     break
                 else:
-                    print("Invalid choice. Try again.")
+                    print("Invalid choice. Try again. ❗")
     elif choice == "3":
-        print("Thank you for using Rawan's Bank 😊!")
+        print("Thank you for using Rawan's Bank 🥰 !")
         break
     else:
-        print("Invalid option. Try again.")
+        print("Invalid option. Try again. ❗")
