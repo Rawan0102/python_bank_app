@@ -13,20 +13,20 @@ class Bank:
                 for row in reader:
                     if len(row) < 6 or row[0] == "account_id":
                         continue  
-                    account_id, first_name, last_name, password, checking, savings = row
+                    account_id, first_name, last_name, password, checking, savings, active = row
                     customers[account_id] = Customer(account_id, first_name, last_name, password, float(checking), float(savings))
         except FileNotFoundError:
             with open(self.filename, mode='w', newline='') as file:
                 writer = csv.writer(file, delimiter=';')
-                writer.writerow(["account_id", "first_name", "last_name", "password", "balance_checking", "balance_savings"])
+                writer.writerow(["account_id", "first_name", "last_name", "password", "balance_checking", "balance_savings", "active"])
         return customers
 
     def save_customers(self):
         with open(self.filename, mode='w', newline='') as file:
             writer = csv.writer(file, delimiter=';')  
-            writer.writerow(["account_id", "first_name", "last_name", "password", "balance_checking", "balance_savings"])
+            writer.writerow(["account_id", "first_name", "last_name", "password", "balance_checking", "balance_savings", "active"])
             for customer in self.customers.values():
-                writer.writerow([customer.account_id, customer.first_name, customer.last_name, customer.password, customer.balance_checking, customer.balance_savings])
+                writer.writerow([customer.account_id, customer.first_name, customer.last_name, customer.password, customer.balance_checking, customer.balance_savings, customer.active])
 
     def add_customer(self):
         first_name = input("Enter First Name: ")
@@ -64,7 +64,7 @@ class Bank:
         return None
 
 class Customer:
-    def __init__(self, account_id, first_name, last_name, password, balance_checking=0.0, balance_savings=0.0):
+    def __init__(self, account_id, first_name, last_name, password, balance_checking=0.0, balance_savings=0.0, active= True):
         self.account_id = account_id
         self.first_name = first_name
         self.last_name = last_name
@@ -72,6 +72,7 @@ class Customer:
         self.balance_checking = balance_checking
         self.balance_savings = balance_savings
         self.overdraft_protection = OverdraftProtection(self)
+        self.active = active 
 
     def display_balance(self):
         print(f"Checking Balance: ${self.balance_checking:.2f}")
@@ -82,7 +83,7 @@ class Customer:
             print("Invalid deposit amount. ❌")
             return
         if account_type == "checking":
-            self.balance_checking += amount
+            self.overdraft_protection.process_deposit(amount)
         elif account_type == "savings":
             self.balance_savings += amount
         print(f"Successfully deposited ${amount:.2f} into {account_type}. ✅")
@@ -180,24 +181,44 @@ class OverdraftProtection:
     def __init__(self, customer):
         self.customer = customer
         self.overdraft_fee = 35.0  
+        self.overdraft_count = 0
 
     def process_withdrawal(self, amount):
-        if self.customer.balance_checking < 0:
-            self.customer.balance_checking -= self.overdraft_fee
-            print(f"Overdraft! A fee of ${self.overdraft_fee:.2f} has been charged 💸.")
+        # if self.customer.balance_checking < 0:
+        #     self.customer.balance_checking -= self.overdraft_fee
+
+        if not self.customer.active:
+            print("❌ Account is deactivated due to overdrafts. Deposit money to reactivate.")
+            self.customer.active = False
+            return False
     
         if self.customer.balance_checking - amount < -100:
             print("Transaction denied: Account balance cannot go below -$100.")
+            # self.customer.active = False
+            if self.overdraft_count >= 2:
+                self.customer.active = False
+                print("❌ Account deactivated due to multiple overdrafts.")
             return False 
 
         self.customer.balance_checking -= amount
 
         if self.customer.balance_checking < 0:
             print(f"Overdraft occurred! Charging a fee of ${self.overdraft_fee:.2f} 💸.")
+            self.overdraft_count += 1
             self.customer.balance_checking -= self.overdraft_fee
+
 
         print(f"Successfully withdrew ${amount:.2f} from checking account. ✅")
         return True  
+
+    def process_deposit(self, amount):
+        self.customer.balance_checking += amount
+        print(f"✅ Deposited ${amount:.2f}. New balance: ${self.customer.balance_checking:.2f}")
+
+        if self.customer.balance_checking >= 0 and not self.customer.active:
+            self.customer.active = True
+            self.overdraft_count = 0
+            print("✅ Account reactivated after deposit.")
 
 # Test
 bank = Bank()
