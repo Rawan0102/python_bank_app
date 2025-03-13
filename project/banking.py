@@ -184,9 +184,7 @@ class OverdraftProtection:
         self.overdraft_count = 0
 
     def process_withdrawal(self, amount):
-        # if self.customer.balance_checking < 0:
-        #     self.customer.balance_checking -= self.overdraft_fee
-
+        
         if not self.customer.active:
             print("❌ Account is deactivated due to overdrafts. Deposit money to reactivate.")
             self.customer.active = False
@@ -194,7 +192,7 @@ class OverdraftProtection:
     
         if self.customer.balance_checking - amount < -100:
             print("Transaction denied: Account balance cannot go below -$100.")
-            # self.customer.active = False
+            
             return False 
 
         if self.overdraft_count == 2:
@@ -223,7 +221,7 @@ class OverdraftProtection:
             self.overdraft_count = 0
             print("✅ Account reactivated after deposit.")
 
-# Test
+
 bank = Bank()
 
 while True:
