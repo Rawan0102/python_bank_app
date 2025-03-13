@@ -1,6 +1,7 @@
 account_id;first_name;last_name;password;balance_checking;balance_savings;active
-10001;suresh;sigera;juagw362;1000.0;10000.0;True
+1;suresh;sigera;1;20.0;10100.0;True
 10002;james;taylor;idh36%@#FGd;10000.0;10000.0;True
 10003;melvin;gordon;uYWE732g4ga1;2000.0;20000.0;True
 10004;stacey;abrams;DEU8_qw3y72$;2000.0;20000.0;True
 10005;jake;paul;d^dg23g)@;100000.0;100000.0;True
+10006;rawan;ali;ra;-105.0;1000.0;True

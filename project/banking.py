@@ -195,16 +195,19 @@ class OverdraftProtection:
         if self.customer.balance_checking - amount < -100:
             print("Transaction denied: Account balance cannot go below -$100.")
             # self.customer.active = False
-            if self.overdraft_count >= 2:
+            return False 
+
+        if self.overdraft_count == 2:
                 self.customer.active = False
                 print("❌ Account deactivated due to multiple overdrafts.")
-            return False 
+                return False
 
         self.customer.balance_checking -= amount
 
         if self.customer.balance_checking < 0:
             print(f"Overdraft occurred! Charging a fee of ${self.overdraft_fee:.2f} 💸.")
             self.overdraft_count += 1
+            print(self.overdraft_count)
             self.customer.balance_checking -= self.overdraft_fee
 
 
